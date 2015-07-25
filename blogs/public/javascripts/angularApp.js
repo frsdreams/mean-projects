@@ -1,9 +1,33 @@
 var app = angular.module('blogs',  ['ui.router']);
 
-app.factory('posts', [function(){
+app.factory('posts', ['$http', function($http){
   var o = {
     posts: []
   };
+    
+    // Retrieve all the posts
+    o.getAll = function() {
+        return $http.get('/posts').success(function(data){
+          angular.copy(data, o.posts);
+        });
+      };
+    
+    // Create post call
+    o.create = function(post) {
+      return $http.post('/posts', post).success(function(data){
+        o.posts.push(data);
+      });
+    };
+    
+     // Increment Likes
+    o.like = function(post) {
+      return $http.put('/posts/' + post._id + '/like')
+        .success(function(data){
+          post.likes += 1;
+        });
+    };
+    
+    
   return o;
 }]);
 
@@ -16,7 +40,12 @@ function($stateProvider, $urlRouterProvider) {
     .state('home', {
       url: '/home',
       templateUrl: '/home.html',
-      controller: 'MainCtrl'
+      controller: 'MainCtrl',
+      resolve: {
+        postPromise: ['posts', function(posts){
+          return posts.getAll();
+        }]
+      }
     })
     .state('posts', {
       url: '/posts/{id}',
@@ -34,22 +63,17 @@ app.controller('MainCtrl', ['$scope','posts',function($scope, posts){
     $scope.addPost = function(){
         if(!$scope.title || $scope.title === '') { return; }
         
-        $scope.posts.push({
+        posts.create({
                 title: $scope.title,
                 desc : $scope.desc,
-                likes: 0,
-                comments: [
-                    {author: 'Joe', body: 'Cool post!', approvestat: 0},
-                    {author: 'Bob', body: 'Great idea but everything is wrong!', approvestat: 0}
-                  ]
-        });
+         });
         
         $scope.title = '';
         $scope.desc = '';
     };
     
     $scope.incrementLikes = function(post) {
-      post.likes += 1;
+       posts.like(post);
     };
     
 }]);
