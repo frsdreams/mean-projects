@@ -12,11 +12,23 @@ app.factory('posts', ['$http', function($http){
         });
       };
     
+     // Retrieve single post
+      o.get = function(id) {
+        return $http.get('/posts/' + id).then(function(res){
+          return res.data;
+        });
+      };
+    
     // Create post call
     o.create = function(post) {
       return $http.post('/posts', post).success(function(data){
         o.posts.push(data);
       });
+    };
+    
+    //add a comment
+    o.addComment = function(id, comment) {
+      return $http.post('/posts/' + id + '/comments', comment);
     };
     
      // Increment Likes
@@ -50,7 +62,12 @@ function($stateProvider, $urlRouterProvider) {
     .state('posts', {
       url: '/posts/{id}',
       templateUrl: '/posts.html',
-      controller: 'PostsCtrl'
+      controller: 'PostsCtrl',
+      resolve: {
+        post: ['$stateParams', 'posts', function($stateParams, posts) {
+          return posts.get($stateParams.id);
+        }]
+      }
     });
 
   $urlRouterProvider.otherwise('home');
@@ -78,17 +95,19 @@ app.controller('MainCtrl', ['$scope','posts',function($scope, posts){
     
 }]);
 
-app.controller('PostsCtrl', ['$scope','$stateParams','posts',function($scope, $stateParams, posts){
+app.controller('PostsCtrl', ['$scope','$stateParams','posts','post', function($scope, $stateParams, posts, post){
     
-    $scope.post = posts.posts[$stateParams.id];
+   $scope.post = post;
     
     $scope.addComment = function(){
       if($scope.body === '') { return; }
-      $scope.post.comments.push({
+      posts.addComment(post._id, {
         body: $scope.body,
         author: 'user',
-        approvestat: 0
-      });
+        approvestat: 0 // approvestat = 1 for displaying the comments
+      }).success(function(comment) {
+         $scope.post.comments.push(comment);
+       });
         
       $scope.body = '';
     };
